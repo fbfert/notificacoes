@@ -156,13 +156,18 @@ Assuma que exista um projeto ativo com uma `api_key` valida.
 ### 1. API key ausente
 
 ```bash
-curl -i -X POST http://localhost/api/sms/send -H "Content-Type: application/json" -d '{"phone":"11999999999","message":"Teste","type":"sms"}'
+curl -X POST https://gateway.tars.art.br/api/sms/send \
+  -H "Content-Type: application/json" \
+  -d '{"phone":"5549999999999","message":"Teste Tars Notificações","type":"transactional"}'
 ```
 
 ### 2. API key invalida
 
 ```bash
-curl -i -X POST http://localhost/api/sms/send -H "Authorization: Bearer invalida" -H "Content-Type: application/json" -d '{"phone":"11999999999","message":"Teste","type":"sms"}'
+curl -X POST https://gateway.tars.art.br/api/sms/send \
+  -H "Authorization: Bearer invalida" \
+  -H "Content-Type: application/json" \
+  -d '{"phone":"5549999999999","message":"Teste Tars Notificações","type":"transactional"}'
 ```
 
 ### 2b. Projeto inativo
@@ -172,25 +177,37 @@ Marque `active = 0` no projeto e repita um envio valido. A resposta deve vir com
 ### 3. Telefone invalido
 
 ```bash
-curl -i -X POST http://localhost/api/sms/send -H "Authorization: Bearer SUA_CHAVE" -H "Content-Type: application/json" -d '{"phone":"abc","message":"Teste","type":"sms"}'
+curl -X POST https://gateway.tars.art.br/api/sms/send \
+  -H "Authorization: Bearer SUA_CHAVE" \
+  -H "Content-Type: application/json" \
+  -d '{"phone":"abc","message":"Teste Tars Notificações","type":"transactional"}'
 ```
 
 ### 4. Mensagem acima de 160 caracteres
 
 ```bash
-curl -i -X POST http://localhost/api/sms/send -H "Authorization: Bearer SUA_CHAVE" -H "Content-Type: application/json" -d '{"phone":"11999999999","message":"ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ","type":"sms"}'
+curl -X POST https://gateway.tars.art.br/api/sms/send \
+  -H "Authorization: Bearer SUA_CHAVE" \
+  -H "Content-Type: application/json" \
+  -d '{"phone":"5549999999999","message":"ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ","type":"transactional"}'
 ```
 
 ### 5. Envio valido
 
 ```bash
-curl -i -X POST http://localhost/api/sms/send -H "Authorization: Bearer SUA_CHAVE" -H "Content-Type: application/json" -d '{"phone":"(11) 99999-9999","message":"Mensagem valida","type":"sms"}'
+curl -X POST https://gateway.tars.art.br/api/sms/send \
+  -H "Authorization: Bearer SUA_CHAVE_DE_TESTE" \
+  -H "Content-Type: application/json" \
+  -d '{"phone":"5549999999999","message":"Teste Tars Notificações","type":"transactional"}'
 ```
 
 ### 6. Reenvio com idempotency_key
 
 ```bash
-curl -i -X POST http://localhost/api/sms/send -H "Authorization: Bearer SUA_CHAVE" -H "Content-Type: application/json" -d '{"phone":"(11) 99999-9999","message":"Mensagem valida","type":"sms","idempotency_key":"pedido-123"}'
+curl -X POST https://gateway.tars.art.br/api/sms/send \
+  -H "Authorization: Bearer SUA_CHAVE_DE_TESTE" \
+  -H "Content-Type: application/json" \
+  -d '{"phone":"5549999999999","message":"Teste Tars Notificações","type":"transactional","idempotency_key":"pedido-123"}'
 ```
 
 Rode a mesma requisicao novamente com o mesmo `idempotency_key` e a API deve retornar a mensagem ja criada sem duplicar registro.
@@ -203,10 +220,62 @@ php cron/processar_fila.php
 
 ### 8. Verificacao no painel
 
-- Abra `http://localhost/admin`
+- Abra `https://gateway.tars.art.br/admin`
 - Entre com `ADMIN_PASSWORD`
 - Verifique projetos e mensagens
 - Confirme que a `api_key` nao aparece em nenhum lugar do painel
+
+## Validacao da v0.2
+
+Use esta sequencia antes de subir para homologacao na VPS:
+
+1. Criar um projeto de teste:
+
+```bash
+php scripts/create_test_project.php
+```
+
+2. Executar a fila mock:
+
+```bash
+php cron/processar_fila.php
+```
+
+3. Rodar o smoke test da API:
+
+```bash
+bash scripts/smoke_test.sh
+```
+
+4. Conferir a fila e os status:
+
+```bash
+php scripts/check_queue.php
+```
+
+### Variaveis do smoke test
+
+Edite no topo de `scripts/smoke_test.sh` ou exporte antes de executar:
+
+- `BASE_URL=https://gateway.tars.art.br`
+- `API_KEY`
+- `PHONE_VALIDO`
+- `PHONE_INVALIDO`
+
+### Respostas HTTP esperadas
+
+- Sem `Authorization`: `401`
+- `Authorization` invalido: `401`
+- Sem `Content-Type: application/json`: `415`
+- JSON invalido: `400`
+- `phone` ausente: `422`
+- `phone` invalido: `422`
+- `message` ausente: `422`
+- `message` vazia: `422`
+- `message` maior que 160 caracteres: `422`
+- `type` invalido: `422`
+- envio valido: `202`
+- reenvio com a mesma `idempotency_key`: `200`
 
 ## Observacoes
 
