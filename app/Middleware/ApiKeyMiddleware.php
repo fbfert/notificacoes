@@ -21,7 +21,7 @@ final class ApiKeyMiddleware
             ], 401);
         }
 
-        $projects = Database::fetchAll('SELECT id, name, slug, api_key_hash, active FROM tn_projects ORDER BY id DESC');
+        $projects = Database::fetchAll('SELECT id, name, slug, api_key_hash, active, daily_limit, monthly_limit, max_attempts FROM tn_projects ORDER BY id DESC');
         foreach ($projects as $project) {
             if (password_verify($token, (string) $project['api_key_hash'])) {
                 if ((int) $project['active'] !== 1) {

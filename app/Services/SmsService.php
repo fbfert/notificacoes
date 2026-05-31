@@ -249,21 +249,21 @@ final class SmsService
         $projectId = (int) $message['project_id'];
         $messageId = (int) $message['id'];
 
-        Database::execute(
-            'UPDATE tn_sms_messages
-             SET status = :status,
-                 provider_message_id = :provider_message_id,
-                 error_message = :error_message,
-                 sent_at = IF(:status = "sent", NOW(), sent_at),
-                 updated_at = NOW()
-             WHERE id = :id',
-            [
-                ':status' => $status,
-                ':provider_message_id' => $result['provider_message_id'] ?? $result['external_id'] ?? null,
-                ':error_message' => $errorMessage,
-                ':id' => $messageId,
-            ]
-        );
+        $sql = 'UPDATE tn_sms_messages
+                SET status = :status,
+                    provider_message_id = :provider_message_id,
+                    error_message = :error_message,
+                    sent_at = :sent_at,
+                    updated_at = NOW()
+                WHERE id = :id';
+
+        Database::execute($sql, [
+            ':status' => $status,
+            ':provider_message_id' => $result['provider_message_id'] ?? $result['external_id'] ?? null,
+            ':error_message' => $errorMessage,
+            ':sent_at' => $status === 'sent' ? date('Y-m-d H:i:s') : null,
+            ':id' => $messageId,
+        ]);
 
         $this->logMessageChange($projectId, $messageId, $status, $result + [
             'error_message' => $errorMessage,

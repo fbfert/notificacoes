@@ -253,6 +253,13 @@ bash scripts/smoke_test.sh
 php scripts/check_queue.php
 ```
 
+5. Validar cenarios estendidos:
+
+```bash
+bash scripts/v02_edge_cases.sh
+bash scripts/panel_smoke.sh
+```
+
 ### Variaveis do smoke test
 
 Edite no topo de `scripts/smoke_test.sh` ou exporte antes de executar:
@@ -261,6 +268,8 @@ Edite no topo de `scripts/smoke_test.sh` ou exporte antes de executar:
 - `API_KEY`
 - `PHONE_VALIDO`
 - `PHONE_INVALIDO`
+
+Os scripts `scripts/v02_edge_cases.sh` e `scripts/panel_smoke.sh` cobrem os cenarios de projeto inativo, opt-out, limites, login/logout e CSRF do painel.
 
 ### Respostas HTTP esperadas
 
