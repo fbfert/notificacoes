@@ -22,11 +22,8 @@ spl_autoload_register(static function (string $class): void {
 \App\Support\Env::load(BASE_PATH . '/.env');
 date_default_timezone_set((string) ($_ENV['APP_TIMEZONE'] ?? 'America/Sao_Paulo'));
 
-use App\Providers\MockSmsProvider;
-use App\Services\QueueService;
-
-$queueService = new QueueService(new MockSmsProvider());
-$summary = $queueService->processPending(100);
+$queueService = new \App\Services\QueueService();
+$summary = $queueService->processPending(\App\Support\Config::queueBatchSize());
 
 echo sprintf(
     "[%s] Processados: %d | Enviados: %d | Falhas: %d\n",

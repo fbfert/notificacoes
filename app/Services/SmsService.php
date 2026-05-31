@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Core\Database;
-use App\Support\Env;
+use App\Support\Config;
+use App\Support\Logger;
 use App\Support\PhoneNormalizer;
 use InvalidArgumentException;
 use Throwable;
@@ -19,29 +20,15 @@ final class SmsService
         }
 
         $projectId = (int) $project['id'];
-        $maxAttempts = max(1, (int) ($project['max_attempts'] ?? 3));
+        $maxAttempts = max(1, (int) ($project['max_attempts'] ?? Config::queueMaxAttempts()));
         $idempotencyKey = isset($meta['idempotency_key']) ? trim((string) $meta['idempotency_key']) : '';
-
-        if ($idempotencyKey !== '') {
-            $existing = Database::fetchOne(
-                'SELECT * FROM tn_sms_messages WHERE project_id = :project_id AND idempotency_key = :idempotency_key LIMIT 1',
-                [
-                    ':project_id' => $projectId,
-                    ':idempotency_key' => $idempotencyKey,
-                ]
-            );
-
-            if ($existing !== null) {
-                return $this->formatMessageResult($existing, true);
-            }
-        }
 
         $messageLength = function_exists('mb_strlen') ? mb_strlen($message) : strlen($message);
         if (trim($message) === '') {
             return $this->storeBlocked($projectId, $recipient, null, $message, 'empty_message', 'Mensagem obrigatoria', $meta, $idempotencyKey, $maxAttempts);
         }
 
-        $maxLength = (int) Env::get('SMS_MAX_LENGTH', 160);
+        $maxLength = 160;
         if ($messageLength > $maxLength) {
             return $this->storeBlocked(
                 $projectId,
@@ -56,10 +43,41 @@ final class SmsService
             );
         }
 
-        try {
-            $phone = PhoneNormalizer::normalizeBrazilian($recipient);
-        } catch (InvalidArgumentException $e) {
-            return $this->storeBlocked($projectId, $recipient, null, $message, 'invalid_phone', $e->getMessage(), $meta, $idempotencyKey, $maxAttempts);
+        $recipientCheck = self::evaluateRecipientForSending($recipient);
+        if (!$recipientCheck['allowed']) {
+            Logger::security('Envio bloqueado por politica de teste', [
+                'project_id' => $projectId,
+                'reason' => $recipientCheck['block_reason'],
+                'phone' => $recipientCheck['phone'],
+            ]);
+
+            return $this->storeBlocked(
+                $projectId,
+                $recipient,
+                $recipientCheck['phone'],
+                $message,
+                (string) $recipientCheck['block_reason'],
+                (string) $recipientCheck['error_message'],
+                $meta,
+                $idempotencyKey,
+                $maxAttempts
+            );
+        }
+
+        $phone = (string) $recipientCheck['phone'];
+
+        if ($idempotencyKey !== '') {
+            $existing = Database::fetchOne(
+                'SELECT * FROM tn_sms_messages WHERE project_id = :project_id AND idempotency_key = :idempotency_key LIMIT 1',
+                [
+                    ':project_id' => $projectId,
+                    ':idempotency_key' => $idempotencyKey,
+                ]
+            );
+
+            if ($existing !== null) {
+                return $this->formatMessageResult($existing, true);
+            }
         }
 
         if ($this->isOptedOut($phone)) {
@@ -95,6 +113,58 @@ final class SmsService
             $attempts,
             $maxAttempts
         );
+    }
+
+    /**
+     * @return array{allowed: bool, phone: ?string, block_reason: ?string, error_message: ?string}
+     */
+    public static function evaluateRecipientForSending(string $recipientRaw): array
+    {
+        try {
+            $phone = PhoneNormalizer::normalizeBrazilian($recipientRaw);
+        } catch (InvalidArgumentException $e) {
+            return [
+                'allowed' => false,
+                'phone' => null,
+                'block_reason' => 'invalid_phone',
+                'error_message' => $e->getMessage(),
+            ];
+        }
+
+        if (!Config::smsTestOnly()) {
+            return [
+                'allowed' => true,
+                'phone' => $phone,
+                'block_reason' => null,
+                'error_message' => null,
+            ];
+        }
+
+        $allowedPhones = Config::smsAllowedTestPhones();
+        if ($allowedPhones === []) {
+            return [
+                'allowed' => false,
+                'phone' => $phone,
+                'block_reason' => 'test_only_allowlist_empty',
+                'error_message' => 'Envio bloqueado: SMS_TEST_ONLY=true e SMS_ALLOWED_TEST_PHONES vazio',
+            ];
+        }
+
+        if (!in_array($phone, $allowedPhones, true)) {
+            return [
+                'allowed' => false,
+                'phone' => $phone,
+                'block_reason' => 'test_only_destination_not_allowed',
+                'error_message' => 'Destino fora da lista permitida em SMS_TEST_ONLY',
+            ];
+        }
+
+        return [
+            'allowed' => true,
+            'phone' => $phone,
+            'block_reason' => null,
+            'error_message' => null,
+        ];
     }
 
     private function isOptedOut(string $phone): bool

@@ -6,15 +6,21 @@ namespace App\Services;
 
 use App\Core\Database;
 use App\Providers\SmsProviderInterface;
+use App\Support\Config;
+use App\Support\SmsProviderResolver;
 
 final class QueueService
 {
-    public function __construct(private readonly SmsProviderInterface $provider)
+    private readonly SmsProviderInterface $provider;
+
+    public function __construct(?SmsProviderInterface $provider = null)
     {
+        $this->provider = $provider ?? (new SmsProviderResolver())->resolve();
     }
 
     public function processPending(int $limit = 50): array
     {
+        $limit = $limit > 0 ? $limit : Config::queueBatchSize();
         $messages = Database::fetchAll(
             'SELECT id FROM tn_sms_messages WHERE status = "queued" ORDER BY id ASC LIMIT ' . max(1, (int) $limit)
         );
@@ -36,7 +42,7 @@ final class QueueService
                     return null;
                 }
 
-                $maxAttempts = (int) ($message['max_attempts'] ?? 3);
+                $maxAttempts = (int) ($message['max_attempts'] ?? Config::queueMaxAttempts());
                 $attempts = (int) ($message['attempts'] ?? 0);
 
                 if ($maxAttempts > 0 && $attempts >= $maxAttempts) {

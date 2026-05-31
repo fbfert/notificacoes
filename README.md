@@ -18,6 +18,10 @@ Base inicial de uma central de notificacoes focada em SMS, com API JSON, fila em
 - `public_html/` - unico diretorio publico
 - `storage/logs/` - logs
 
+## Homologacao em gateway.tars.art.br
+
+Para instalar em homologacao na VPS, siga o guia completo em [DEPLOY.md](DEPLOY.md).
+
 ## Instalacao local
 
 1. Crie o banco:
@@ -149,6 +153,22 @@ php cron/processar_fila.php
 
 O cron faz claim transacional do registro, muda o status para `processing` e evita processar a mesma mensagem em duas execucoes simultaneas.
 
+## Travas de seguranca de envio
+
+Para homologacao em `gateway.tars.art.br`, o ambiente deve subir inicialmente com:
+
+- `SMS_DRIVER=mock`
+- `SMS_PROVIDER=mock`
+- `SMS_ALLOW_REAL_SEND=false`
+- `SMS_TEST_ONLY=true`
+
+Com essas travas:
+
+- qualquer tentativa de envio real permanece bloqueada
+- somente numeros listados em `SMS_ALLOWED_TEST_PHONES` sao aceitos quando `SMS_TEST_ONLY=true`
+- se `SMS_ALLOWED_TEST_PHONES` estiver vazio com `SMS_TEST_ONLY=true`, o envio e bloqueado
+- `SMS_DRIVER` ou `SMS_PROVIDER` diferentes de `mock` nao ativam envio real enquanto `SMS_ALLOW_REAL_SEND=false`
+
 ## Testes manuais com curl
 
 Assuma que exista um projeto ativo com uma `api_key` valida.
@@ -247,13 +267,19 @@ php cron/processar_fila.php
 bash scripts/smoke_test.sh
 ```
 
-4. Conferir a fila e os status:
+4. Validar as travas de seguranca:
+
+```bash
+php scripts/security_v021_tests.php
+```
+
+5. Conferir a fila e os status:
 
 ```bash
 php scripts/check_queue.php
 ```
 
-5. Validar cenarios estendidos:
+6. Validar cenarios estendidos:
 
 ```bash
 bash scripts/v02_edge_cases.sh
