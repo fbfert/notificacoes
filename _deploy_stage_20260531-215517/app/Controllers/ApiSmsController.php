@@ -8,7 +8,6 @@ use App\Core\Response;
 use App\Core\Request;
 use App\Middleware\ApiKeyMiddleware;
 use App\Services\SmsService;
-use App\Support\Logger;
 use InvalidArgumentException;
 use JsonException;
 
@@ -120,15 +119,6 @@ final class ApiSmsController
                 'message' => $e->getMessage(),
             ], 422);
         } catch (\Throwable $e) {
-            error_log(sprintf(
-                'Tars Notificacoes API SMS internal error: %s: %s',
-                get_class($e),
-                $e->getMessage()
-            ));
-            Logger::warning('API SMS internal error', [
-                'exception' => get_class($e),
-                'message' => $e->getMessage(),
-            ]);
             Response::json([
                 'success' => false,
                 'error_code' => 'internal_error',

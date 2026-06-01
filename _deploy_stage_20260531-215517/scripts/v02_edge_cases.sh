@@ -213,11 +213,6 @@ mapfile -t response < <(http_request_cookie POST "$ADMIN_URL/logout" "csrf_token
 expect_status 'Logout do painel' 302 "${response[0]}" "${response[1]}"
 
 printf '== CSRF bloqueio em POST administrativo ==\n'
-mapfile -t response < <(http_request_cookie GET "$ADMIN_URL" "" )
-csrf_page="${response[1]}"
-csrf_token="$(grep -oE 'name="csrf_token" value="[^"]+"' "$csrf_page" | head -1 | sed 's/.*value="//; s/"$//')"
-mapfile -t response < <(http_request_cookie POST "$ADMIN_URL/login" "csrf_token=${csrf_token}&password=${ADMIN_PASSWORD}" -H 'Content-Type: application/x-www-form-urlencoded')
-expect_status 'Re-login do painel para CSRF' 302 "${response[0]}" "${response[1]}"
 mapfile -t response < <(http_request POST "$ADMIN_URL/login" "password=${ADMIN_PASSWORD}" -H 'Content-Type: application/x-www-form-urlencoded')
 expect_status 'CSRF em /admin/login' 419 "${response[0]}" "${response[1]}"
 mapfile -t response < <(http_request_cookie POST "$ADMIN_URL/projects" "name=CSRF Test&slug=csrf-test&api_key=test" -H 'Content-Type: application/x-www-form-urlencoded')

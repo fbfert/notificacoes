@@ -1,0 +1,16 @@
+.env
+/.idea/
+/.vscode/
+/vendor/
+/storage/logs/*.log
+/storage/logs/*.txt
+/storage/logs/*.json
+/storage/cache/*
+!/storage/cache/.gitkeep
+/storage/tmp/*
+!/storage/tmp/.gitkeep
+*.tmp
+*.swp
+*.bak
+Thumbs.db
+.DS_Store
