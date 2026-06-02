@@ -20,7 +20,18 @@ Base inicial de uma central de notificacoes focada em SMS, com API JSON, fila em
 
 ## Homologacao em gateway.tars.art.br
 
-Para instalar em homologacao na VPS, siga o guia completo em [DEPLOY.md](DEPLOY.md).
+A versao `v0.3-homologada-publica` foi validada publicamente em `https://gateway.tars.art.br` em modo `mock/log`.
+
+Configuracao homologada:
+
+- `SMS_DRIVER=mock`
+- `SMS_PROVIDER=mock`
+- `SMS_ALLOW_REAL_SEND=false`
+- `SMS_TEST_ONLY=true`
+
+Nesta fase nenhum SMS real deve ser enviado.
+
+Para instalar ou revisar a homologacao, siga o guia completo em [DEPLOY.md](DEPLOY.md).
 
 ## Instalacao local
 
@@ -99,14 +110,14 @@ Payload:
 {
   "phone": "(11) 99999-9999",
   "message": "Sua mensagem aqui",
-  "type": "sms",
+  "type": "transactional",
   "idempotency_key": "pedido-123"
 }
 ```
 
 Regras:
 
-- apenas SMS nesta etapa
+- tipos aceitos no MVP: `transactional`, `alert`, `test`
 - limite de 160 caracteres
 - provider real nao esta habilitado
 - toda mensagem e salva no banco
@@ -168,6 +179,7 @@ Com essas travas:
 - somente numeros listados em `SMS_ALLOWED_TEST_PHONES` sao aceitos quando `SMS_TEST_ONLY=true`
 - se `SMS_ALLOWED_TEST_PHONES` estiver vazio com `SMS_TEST_ONLY=true`, o envio e bloqueado
 - `SMS_DRIVER` ou `SMS_PROVIDER` diferentes de `mock` nao ativam envio real enquanto `SMS_ALLOW_REAL_SEND=false`
+- a acao administrativa de integracao usa `type=test`
 
 ## Testes manuais com curl
 
@@ -296,6 +308,25 @@ Edite no topo de `scripts/smoke_test.sh` ou exporte antes de executar:
 - `PHONE_INVALIDO`
 
 Os scripts `scripts/v02_edge_cases.sh` e `scripts/panel_smoke.sh` cobrem os cenarios de projeto inativo, opt-out, limites, login/logout e CSRF do painel.
+
+## Release v0.3-homologada-publica
+
+A homologacao publica foi concluida em `https://gateway.tars.art.br` com:
+
+- DNS publico apontando para `129.121.33.89`
+- HTTPS Let's Encrypt valido
+- API validada com 25 testes
+- edge cases aprovados
+- painel e CSRF aprovados
+- fila mock aprovada
+- diretorios sensiveis nao expostos
+- travas de envio real ativas
+
+O ambiente permanece em modo mock/log, sem envio real de SMS.
+
+## Integracao de cliente v0.4
+
+A integracao inicial do projeto cliente com o gateway esta documentada em [docs/INTEGRACAO_TARS_NOTIFICACOES.md](docs/INTEGRACAO_TARS_NOTIFICACOES.md).
 
 ### Respostas HTTP esperadas
 

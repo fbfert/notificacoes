@@ -91,56 +91,56 @@ if [[ -z "$API_KEY" ]]; then
     exit 1
 fi
 
-mapfile -t response < <(request POST "$API_URL" '{"phone":"'"$PHONE_VALIDO"'","message":"Teste","type":"sms"}' -H 'Content-Type: application/json')
+mapfile -t response < <(request POST "$API_URL" '{"phone":"'"$PHONE_VALIDO"'","message":"Teste","type":"transactional"}' -H 'Content-Type: application/json')
 code="${response[0]}"
 file="${response[1]}"
 assert_http 'Sem Authorization' 401 "$code"
 assert_body_contains 'Sem Authorization - mensagem' "$file" 'API key ausente'
 
-mapfile -t response < <(request POST "$API_URL" '{"phone":"'"$PHONE_VALIDO"'","message":"Teste","type":"sms"}' -H 'Authorization: Bearer invalida' -H 'Content-Type: application/json')
+mapfile -t response < <(request POST "$API_URL" '{"phone":"'"$PHONE_VALIDO"'","message":"Teste","type":"transactional"}' -H 'Authorization: Bearer invalida' -H 'Content-Type: application/json')
 code="${response[0]}"
 file="${response[1]}"
 assert_http 'Authorization invalido' 401 "$code"
 assert_body_contains 'Authorization invalido - mensagem' "$file" 'API key invalida'
 
-mapfile -t response < <(request POST "$API_URL" '{"phone":"'"$PHONE_VALIDO"'","message":"Teste","type":"sms"}' -H "Authorization: Bearer $API_KEY")
+mapfile -t response < <(request POST "$API_URL" '{"phone":"'"$PHONE_VALIDO"'","message":"Teste","type":"transactional"}' -H "Authorization: Bearer $API_KEY")
 code="${response[0]}"
 file="${response[1]}"
 assert_http 'Sem Content-Type application/json' 415 "$code"
 assert_body_contains 'Sem Content-Type - mensagem' "$file" 'Content-Type deve ser application/json'
 
-mapfile -t response < <(request POST "$API_URL" '{"phone":"'"$PHONE_VALIDO"'","message":"Teste","type":"sms"' -H "Authorization: Bearer $API_KEY" -H 'Content-Type: application/json')
+mapfile -t response < <(request POST "$API_URL" '{"phone":"'"$PHONE_VALIDO"'","message":"Teste","type":"transactional"' -H "Authorization: Bearer $API_KEY" -H 'Content-Type: application/json')
 code="${response[0]}"
 file="${response[1]}"
 assert_http 'JSON invalido' 400 "$code"
 assert_body_contains 'JSON invalido - mensagem' "$file" 'JSON invalido'
 
-mapfile -t response < <(request POST "$API_URL" '{"message":"Teste","type":"sms"}' -H "Authorization: Bearer $API_KEY" -H 'Content-Type: application/json')
+mapfile -t response < <(request POST "$API_URL" '{"message":"Teste","type":"transactional"}' -H "Authorization: Bearer $API_KEY" -H 'Content-Type: application/json')
 code="${response[0]}"
 file="${response[1]}"
 assert_http 'Phone ausente' 422 "$code"
 assert_body_contains 'Phone ausente - mensagem' "$file" 'Campo phone obrigatorio'
 
-mapfile -t response < <(request POST "$API_URL" '{"phone":"'"$PHONE_INVALIDO"'","message":"Teste","type":"sms"}' -H "Authorization: Bearer $API_KEY" -H 'Content-Type: application/json')
+mapfile -t response < <(request POST "$API_URL" '{"phone":"'"$PHONE_INVALIDO"'","message":"Teste","type":"transactional"}' -H "Authorization: Bearer $API_KEY" -H 'Content-Type: application/json')
 code="${response[0]}"
 file="${response[1]}"
 assert_http 'Phone invalido' 422 "$code"
 assert_body_contains 'Phone invalido - mensagem' "$file" 'Telefone invalido'
 
-mapfile -t response < <(request POST "$API_URL" '{"phone":"'"$PHONE_VALIDO"'","type":"sms"}' -H "Authorization: Bearer $API_KEY" -H 'Content-Type: application/json')
+mapfile -t response < <(request POST "$API_URL" '{"phone":"'"$PHONE_VALIDO"'","type":"transactional"}' -H "Authorization: Bearer $API_KEY" -H 'Content-Type: application/json')
 code="${response[0]}"
 file="${response[1]}"
 assert_http 'Message ausente' 422 "$code"
 assert_body_contains 'Message ausente - mensagem' "$file" 'Campo message obrigatorio'
 
-mapfile -t response < <(request POST "$API_URL" '{"phone":"'"$PHONE_VALIDO"'","message":"","type":"sms"}' -H "Authorization: Bearer $API_KEY" -H 'Content-Type: application/json')
+mapfile -t response < <(request POST "$API_URL" '{"phone":"'"$PHONE_VALIDO"'","message":"","type":"transactional"}' -H "Authorization: Bearer $API_KEY" -H 'Content-Type: application/json')
 code="${response[0]}"
 file="${response[1]}"
 assert_http 'Message vazia' 422 "$code"
 assert_body_contains 'Message vazia - mensagem' "$file" 'Mensagem obrigatoria'
 
 LONG_MESSAGE="$(printf 'A%.0s' {1..161})"
-mapfile -t response < <(request POST "$API_URL" '{"phone":"'"$PHONE_VALIDO"'","message":"'"$LONG_MESSAGE"'","type":"sms"}' -H "Authorization: Bearer $API_KEY" -H 'Content-Type: application/json')
+mapfile -t response < <(request POST "$API_URL" '{"phone":"'"$PHONE_VALIDO"'","message":"'"$LONG_MESSAGE"'","type":"transactional"}' -H "Authorization: Bearer $API_KEY" -H 'Content-Type: application/json')
 code="${response[0]}"
 file="${response[1]}"
 assert_http 'Message longa' 422 "$code"
@@ -153,14 +153,14 @@ assert_http 'Type invalido' 422 "$code"
 assert_body_contains 'Type invalido - mensagem' "$file" 'Tipo invalido'
 
 IDEMPOTENCY_KEY="smoke-$(date +%s)-$$"
-mapfile -t response < <(request POST "$API_URL" '{"phone":"'"$PHONE_VALIDO"'","message":"Mensagem valida smoke","type":"sms","idempotency_key":"'"$IDEMPOTENCY_KEY"'"}' -H "Authorization: Bearer $API_KEY" -H 'Content-Type: application/json')
+mapfile -t response < <(request POST "$API_URL" '{"phone":"'"$PHONE_VALIDO"'","message":"Mensagem valida smoke","type":"transactional","idempotency_key":"'"$IDEMPOTENCY_KEY"'"}' -H "Authorization: Bearer $API_KEY" -H 'Content-Type: application/json')
 code="${response[0]}"
 file="${response[1]}"
 assert_http 'Envio valido' 202 "$code"
 assert_body_contains 'Envio valido - sucesso' "$file" '"success":true'
 MESSAGE_ID_ONE="$(extract_json_value "$file" 'data.message_id')"
 
-mapfile -t response < <(request POST "$API_URL" '{"phone":"'"$PHONE_VALIDO"'","message":"Mensagem valida smoke","type":"sms","idempotency_key":"'"$IDEMPOTENCY_KEY"'"}' -H "Authorization: Bearer $API_KEY" -H 'Content-Type: application/json')
+mapfile -t response < <(request POST "$API_URL" '{"phone":"'"$PHONE_VALIDO"'","message":"Mensagem valida smoke","type":"transactional","idempotency_key":"'"$IDEMPOTENCY_KEY"'"}' -H "Authorization: Bearer $API_KEY" -H 'Content-Type: application/json')
 code="${response[0]}"
 file="${response[1]}"
 assert_http 'Reenvio idempotente' 200 "$code"

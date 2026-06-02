@@ -84,9 +84,19 @@ final class SmsService
             return $this->storeBlocked($projectId, $recipient, $phone, $message, 'optout', 'Telefone bloqueado por opt-out', $meta, $idempotencyKey, $maxAttempts);
         }
 
-        $type = strtolower((string) ($meta['type'] ?? 'sms'));
-        if ($type !== 'sms') {
-            return $this->storeBlocked($projectId, $recipient, $phone, $message, 'invalid_type', 'Tipo de mensagem invalido', $meta, $idempotencyKey, $maxAttempts);
+        $type = Config::normalizeSmsType($meta['type'] ?? null);
+        if (!Config::smsTypeAllowed($type)) {
+            return $this->storeBlocked(
+                $projectId,
+                $recipient,
+                $phone,
+                $message,
+                'invalid_type',
+                'Tipo de mensagem invalido. Tipos aceitos: ' . implode(', ', Config::allowedSmsTypes()),
+                $meta,
+                $idempotencyKey,
+                $maxAttempts
+            );
         }
 
         if ($this->isOverLimit($project, 'daily_limit', 'DAY')) {

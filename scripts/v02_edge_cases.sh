@@ -102,7 +102,7 @@ expect_status() {
 send_sms() {
     local phone="$1"
     local message="$2"
-    local type="${3:-sms}"
+    local type="${3:-transactional}"
     local idempotency_key="${4:-}"
     local payload
 
@@ -159,42 +159,42 @@ trap cleanup EXIT
 
 printf '== Projeto inativo ==\n'
 update_project "active=0"
-mapfile -t response < <(send_sms "$PHONE_VALIDO" 'Teste projeto inativo' 'sms' "inactive-$(date +%s)")
+mapfile -t response < <(send_sms "$PHONE_VALIDO" 'Teste projeto inativo' 'transactional' "inactive-$(date +%s)")
 expect_status 'Projeto inativo' 403 "${response[0]}" "${response[1]}"
 expect_contains 'Projeto inativo - corpo' "${response[1]}" 'project_inactive'
 restore_project
 
 printf '== Opt-out ==\n'
 mysql_query "INSERT INTO tn_optouts (phone, reason, created_at) VALUES ('5511999999999', 'teste validation', NOW()) ON DUPLICATE KEY UPDATE reason=VALUES(reason);" >/dev/null
-mapfile -t response < <(send_sms "$PHONE_OPT_OUT" 'Teste optout' 'sms' "optout-$(date +%s)")
+mapfile -t response < <(send_sms "$PHONE_OPT_OUT" 'Teste optout' 'transactional' "optout-$(date +%s)")
 expect_status 'Telefone em optout' 422 "${response[0]}" "${response[1]}"
 expect_contains 'Telefone em optout - corpo' "${response[1]}" 'Telefone bloqueado por opt-out'
 mysql_query "DELETE FROM tn_optouts WHERE phone='5511999999999';" >/dev/null
 
 printf '== daily_limit = 0 ==\n'
 update_project "daily_limit=0"
-mapfile -t response < <(send_sms "$PHONE_VALIDO" 'Teste daily_limit zero' 'sms' "daily0-$(date +%s)")
+mapfile -t response < <(send_sms "$PHONE_VALIDO" 'Teste daily_limit zero' 'transactional' "daily0-$(date +%s)")
 expect_status 'daily_limit=0' 422 "${response[0]}" "${response[1]}"
 expect_contains 'daily_limit=0 - corpo' "${response[1]}" 'Limite diario do projeto atingido'
 restore_project
 
 printf '== monthly_limit = 0 ==\n'
 update_project "monthly_limit=0"
-mapfile -t response < <(send_sms "$PHONE_VALIDO" 'Teste monthly_limit zero' 'sms' "monthly0-$(date +%s)")
+mapfile -t response < <(send_sms "$PHONE_VALIDO" 'Teste monthly_limit zero' 'transactional' "monthly0-$(date +%s)")
 expect_status 'monthly_limit=0' 422 "${response[0]}" "${response[1]}"
 expect_contains 'monthly_limit=0 - corpo' "${response[1]}" 'Limite mensal do projeto atingido'
 restore_project
 
 printf '== Limite diario atingido ==\n'
 update_project "daily_limit=1"
-mapfile -t response < <(send_sms "$PHONE_VALIDO" 'Teste daily_limit reached' 'sms' "daily1-$(date +%s)")
+mapfile -t response < <(send_sms "$PHONE_VALIDO" 'Teste daily_limit reached' 'transactional' "daily1-$(date +%s)")
 expect_status 'Limite diario atingido' 422 "${response[0]}" "${response[1]}"
 expect_contains 'Limite diario atingido - corpo' "${response[1]}" 'Limite diario do projeto atingido'
 restore_project
 
 printf '== Limite mensal atingido ==\n'
 update_project "monthly_limit=1"
-mapfile -t response < <(send_sms "$PHONE_VALIDO" 'Teste monthly_limit reached' 'sms' "monthly1-$(date +%s)")
+mapfile -t response < <(send_sms "$PHONE_VALIDO" 'Teste monthly_limit reached' 'transactional' "monthly1-$(date +%s)")
 expect_status 'Limite mensal atingido' 422 "${response[0]}" "${response[1]}"
 expect_contains 'Limite mensal atingido - corpo' "${response[1]}" 'Limite mensal do projeto atingido'
 restore_project

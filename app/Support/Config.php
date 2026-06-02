@@ -80,6 +80,49 @@ final class Config
         return max(1, self::int('QUEUE_MAX_ATTEMPTS', 3));
     }
 
+    /**
+     * @return string[]
+     */
+    public static function allowedSmsTypes(): array
+    {
+        return ['transactional', 'alert', 'test'];
+    }
+
+    public static function normalizeSmsType(?string $type): string
+    {
+        return strtolower(trim((string) $type));
+    }
+
+    public static function smsTypeAllowed(?string $type): bool
+    {
+        return in_array(self::normalizeSmsType($type), self::allowedSmsTypes(), true);
+    }
+
+    public static function tarsNotificationsEnabled(): bool
+    {
+        return self::bool('TARS_NOTIFICACOES_ENABLED', false);
+    }
+
+    public static function tarsNotificationsBaseUrl(): string
+    {
+        return self::string('TARS_NOTIFICACOES_BASE_URL', 'https://gateway.tars.art.br');
+    }
+
+    public static function tarsNotificationsApiKey(): string
+    {
+        return self::string('TARS_NOTIFICACOES_API_KEY', '');
+    }
+
+    public static function tarsNotificationsTestPhone(): string
+    {
+        return self::string('TARS_NOTIFICACOES_TEST_PHONE', '5549999999999');
+    }
+
+    public static function tarsNotificationsTimeout(): int
+    {
+        return max(1, self::int('TARS_NOTIFICACOES_TIMEOUT', 10));
+    }
+
     public static function string(string $key, string $default = ''): string
     {
         $value = Env::get($key, $default);

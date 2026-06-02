@@ -54,6 +54,7 @@ $router = new Router();
 
 $router->get('/', [AdminDashboardController::class, 'index']);
 $router->get('/admin', [AdminDashboardController::class, 'index']);
+$router->post('/admin/tars-notificacoes/test', [AdminDashboardController::class, 'sendTarsNotificationsTest']);
 $router->post('/admin/login', [AdminDashboardController::class, 'login']);
 $router->post('/admin/logout', [AdminDashboardController::class, 'logout']);
 $router->get('/admin/projects', [ProjectsController::class, 'index']);

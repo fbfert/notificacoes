@@ -2,6 +2,19 @@
 
 Este guia prepara o Tars Notificacoes para homologacao em uma VPS AlmaLinux 9.8 com Apache, PHP 8.2+ e MySQL/MariaDB.
 
+## Status da release
+
+A release `v0.3-homologada-publica` foi validada publicamente em `https://gateway.tars.art.br`.
+
+Configuracao homologada:
+
+- `SMS_DRIVER=mock`
+- `SMS_PROVIDER=mock`
+- `SMS_ALLOW_REAL_SEND=false`
+- `SMS_TEST_ONLY=true`
+
+Nesta fase nenhum SMS real deve ser enviado.
+
 ## 1. Subdominio e VirtualHost
 
 Crie o subdominio `gateway.tars.art.br` no DNS apontando para o IP da VPS.
@@ -31,7 +44,7 @@ Pontos obrigatorios:
 - nunca aponte a raiz do projeto
 - mantenha `AllowOverride All` para o `.htaccess`
 
-## 2. HTTPS e Let\'s Encrypt
+## 2. HTTPS e Let's Encrypt
 
 Depois de validar o VirtualHost HTTP, emita o certificado SSL:
 
@@ -144,6 +157,11 @@ php cron/processar_fila.php
 php scripts/check_queue.php
 php scripts/security_v021_tests.php
 ```
+
+Veja tambem os detalhes de integracao e da proxima etapa em:
+
+- [docs/INTEGRACAO_CLIENTE.md](docs/INTEGRACAO_CLIENTE.md)
+- [docs/PROXIMA_ETAPA_V04.md](docs/PROXIMA_ETAPA_V04.md)
 
 ## 9. Checklist de seguranca
 

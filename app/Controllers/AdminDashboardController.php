@@ -7,6 +7,8 @@ namespace App\Controllers;
 use App\Core\Database;
 use App\Core\Request;
 use App\Core\Response;
+use App\Services\TarsNotificationsClient;
+use App\Support\Config;
 use App\Support\Csrf;
 use App\Support\Env;
 
@@ -38,6 +40,40 @@ final class AdminDashboardController
         $html = $this->layout('Dashboard', $warning . $this->dashboardMarkup($stats, $recentMessages));
 
         Response::html($html);
+    }
+
+    public function sendTarsNotificationsTest(Request $request): never
+    {
+        $this->requireAdmin();
+
+        if (!Csrf::validate((string) $request->input('csrf_token', ''))) {
+            Response::html($this->layout('Integracao Tars Notificacoes', '<div class="card">CSRF invalido.</div>' . $this->integrationMarkup()), 419);
+        }
+
+        $client = new TarsNotificationsClient();
+        $result = $client->sendAdministrativeTest(
+            Config::tarsNotificationsTestPhone(),
+            'Teste de integração do projeto cliente com o Tars Notificações.',
+            'admin-test',
+            'test'
+        );
+
+        $statusLabel = $result['ok']
+            ? 'Solicitação aceita pelo gateway.'
+            : (($result['skipped'] ?? false) ? 'Integração desativada.' : 'Falha ao enviar solicitação.');
+
+        $body = '<section class="card"><h2>Teste de integração Tars Notificações</h2>'
+            . '<p>' . htmlspecialchars($statusLabel, ENT_QUOTES, 'UTF-8') . '</p>'
+            . '<ul>'
+            . '<li><strong>HTTP:</strong> ' . htmlspecialchars((string) ($result['http_status'] ?? 'n/a'), ENT_QUOTES, 'UTF-8') . '</li>'
+            . '<li><strong>Status gateway:</strong> ' . htmlspecialchars((string) ($result['gateway_status'] ?? 'n/a'), ENT_QUOTES, 'UTF-8') . '</li>'
+            . '<li><strong>Message ID:</strong> ' . htmlspecialchars((string) ($result['message_id'] ?? 'n/a'), ENT_QUOTES, 'UTF-8') . '</li>'
+            . '<li><strong>Erro:</strong> ' . htmlspecialchars((string) ($result['error'] ?? 'nenhum'), ENT_QUOTES, 'UTF-8') . '</li>'
+            . '</ul>'
+            . '<p><a href="/admin">Voltar ao dashboard</a></p>'
+            . '</section>';
+
+        Response::html($this->layout('Integracao Tars Notificacoes', $body));
     }
 
     public function login(Request $request): never
@@ -112,6 +148,17 @@ final class AdminDashboardController
 
     private function dashboardMarkup(array $stats, array $recentMessages): string
     {
+        $integrationCard = '<section class="card"><h2>Integracao Tars Notificacoes</h2>'
+            . '<p>Envio administrativo de teste em modo mock/log. Nenhum SMS real deve ser enviado.</p>'
+            . '<p><strong>Base URL:</strong> ' . htmlspecialchars(Config::tarsNotificationsBaseUrl(), ENT_QUOTES, 'UTF-8') . '</p>'
+            . '<p><strong>Destino de teste:</strong> ' . htmlspecialchars(Config::tarsNotificationsTestPhone(), ENT_QUOTES, 'UTF-8') . '</p>'
+            . '<p><strong>Status:</strong> ' . (Config::tarsNotificationsEnabled() ? 'habilitada' : 'desativada') . '</p>'
+            . '<form method="post" action="/admin/tars-notificacoes/test" class="form">'
+            . '<input type="hidden" name="csrf_token" value="' . htmlspecialchars(Csrf::token(), ENT_QUOTES, 'UTF-8') . '">'
+            . '<button type="submit">Enviar teste administrativo</button>'
+            . '</form>'
+            . '</section>';
+
         $cards = '<div class="grid">';
         foreach ($stats as $label => $value) {
             $cards .= '<div class="card stat"><span>' . htmlspecialchars(ucfirst($label), ENT_QUOTES, 'UTF-8') . '</span><strong>' . (int) $value . '</strong></div>';
@@ -132,6 +179,14 @@ final class AdminDashboardController
         }
         $table .= '</tbody></table></section>';
 
-        return $cards . $table;
+        return $integrationCard . $cards . $table;
+    }
+
+    private function integrationMarkup(): string
+    {
+        return '<section class="card"><h2>Integracao Tars Notificacoes</h2>'
+            . '<p>Use o botao no dashboard para enviar um teste administrativo em modo mock/log.</p>'
+            . '<p><strong>Observacao:</strong> TARS_NOTIFICACOES_ENABLED deve estar configurado como <code>true</code> para enviar a requisicao.</p>'
+            . '</section>';
     }
 }

@@ -48,7 +48,7 @@ admin_status="${admin_response%%$'\n'*}"
 admin_file="${admin_response#*$'\n'}"
 printf '[INFO] GET /admin -> HTTP %s | corpo=%s\n' "$admin_status" "$(snippet "$admin_file")"
 
-api_response="$(request POST "$api_url" '{"phone":"'"$PHONE_VALIDO"'","message":"Health check","type":"sms"}' -H 'Content-Type: application/json')"
+api_response="$(request POST "$api_url" '{"phone":"'"$PHONE_VALIDO"'","message":"Health check","type":"transactional"}' -H 'Content-Type: application/json')"
 api_status="${api_response%%$'\n'*}"
 api_file="${api_response#*$'\n'}"
 printf '[INFO] POST /api/sms/send sem Authorization -> HTTP %s | corpo=%s\n' "$api_status" "$(snippet "$api_file")"

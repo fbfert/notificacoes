@@ -33,6 +33,8 @@ final class SecurityTestRunner
         $this->testResolverExternalBlocked();
         $this->testResolverInvalidDriver();
         $this->testAllowedPhonesNormalization();
+        $this->testAllowedSmsTypes();
+        $this->testSmsTypeValidation();
 
         $total = $this->passed + $this->failed;
         echo sprintf("[%s] Total: %d | Aprovados: %d | Falhas: %d\n", date('Y-m-d H:i:s'), $total, $this->passed, $this->failed);
@@ -120,6 +122,21 @@ final class SecurityTestRunner
             $phones = \App\Support\Config::smsAllowedTestPhones();
             $this->assertTrue($phones === ['5549999999999'], 'Lista de teste e normalizada e deduplicada');
         });
+    }
+
+    private function testAllowedSmsTypes(): void
+    {
+        $types = \App\Support\Config::allowedSmsTypes();
+        $this->assertTrue($types === ['transactional', 'alert', 'test'], 'Lista de tipos aceita no MVP');
+    }
+
+    private function testSmsTypeValidation(): void
+    {
+        $this->assertTrue(\App\Support\Config::smsTypeAllowed('transactional'), 'transactional e aceito');
+        $this->assertTrue(\App\Support\Config::smsTypeAllowed('alert'), 'alert e aceito');
+        $this->assertTrue(\App\Support\Config::smsTypeAllowed('test'), 'test e aceito');
+        $this->assertTrue(\App\Support\Config::smsTypeAllowed(' transactional '), 'Normalizacao de tipo aceita espacos');
+        $this->assertTrue(!\App\Support\Config::smsTypeAllowed('sms'), 'sms nao e mais aceito no MVP');
     }
 
     private function withEnv(array $vars, callable $callback): void

@@ -8,6 +8,7 @@ use App\Core\Response;
 use App\Core\Request;
 use App\Middleware\ApiKeyMiddleware;
 use App\Services\SmsService;
+use App\Support\Config;
 use App\Support\Logger;
 use InvalidArgumentException;
 use JsonException;
@@ -44,7 +45,7 @@ final class ApiSmsController
 
         $phoneRaw = $payload['phone'] ?? null;
         $messageRaw = $payload['message'] ?? null;
-        $typeRaw = $payload['type'] ?? 'sms';
+        $typeRaw = $payload['type'] ?? null;
         $idempotencyKey = isset($payload['idempotency_key']) ? trim((string) $payload['idempotency_key']) : '';
 
         if (!array_key_exists('phone', $payload)) {
@@ -88,11 +89,15 @@ final class ApiSmsController
             ], 422);
         }
 
-        if (!is_string($typeRaw) || strtolower($typeRaw) !== 'sms') {
+        $typeNormalized = Config::normalizeSmsType(is_string($typeRaw) ? $typeRaw : '');
+        if (!Config::smsTypeAllowed($typeNormalized)) {
             Response::json([
                 'success' => false,
                 'error_code' => 'invalid_type',
-                'message' => 'Tipo invalido. Apenas sms e permitido nesta etapa',
+                'message' => 'Tipo invalido. Tipos aceitos: ' . implode(', ', Config::allowedSmsTypes()),
+                'data' => [
+                    'accepted_types' => Config::allowedSmsTypes(),
+                ],
             ], 422);
         }
 
@@ -110,7 +115,7 @@ final class ApiSmsController
             $result = (new SmsService())->queueSms($project, $phoneRaw, $messageRaw, [
                 'source' => 'api',
                 'ip' => $request->server['REMOTE_ADDR'] ?? null,
-                'type' => 'sms',
+                'type' => $typeNormalized,
                 'idempotency_key' => $idempotencyKey !== '' ? $idempotencyKey : null,
             ]);
         } catch (InvalidArgumentException $e) {
