@@ -1,5 +1,24 @@
 # Release Notes
 
+## v0.5-kit-integracao-clientes
+
+Kit oficial de integracao para projetos clientes consumirem o gateway em modo mock/log, sem integrar um projeto externo real ainda.
+
+### Entregas
+
+- cliente PHP de referencia
+- exemplo cURL
+- exemplo JavaScript/fetch para backend
+- smoke test externo para clientes
+- guia de integracao para clientes
+- checklist de integracao para clientes
+
+### Observacao
+
+- os exemplos usam `type=test` por padrao
+- o gateway permanece em mock/log
+- nenhum SMS real deve ser enviado
+
 ## v0.4-operacionalizacao-do-gateway
 
 Etapa aprovada para operacionalização interna do Tars Notificações.

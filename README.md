@@ -211,6 +211,27 @@ Documentacao operacional:
 - [docs/API_STATUS.md](docs/API_STATUS.md)
 - [docs/GESTAO_API_KEYS.md](docs/GESTAO_API_KEYS.md)
 
+## Kit de integracao v0.5
+
+A etapa `v0.5-kit-integracao-clientes` publica o kit oficial para projetos clientes consumirem o gateway em modo mock/log, sem integrar um projeto externo real ainda.
+
+Componentes publicados:
+
+- `examples/clientes/php/TarsNotificationsClient.php`
+- `examples/clientes/php/exemplo_envio_teste.php`
+- `examples/clientes/curl/enviar_teste.sh`
+- `examples/clientes/javascript/enviar_teste.js`
+- `scripts/client_external_smoke_test.sh`
+- `docs/clientes/GUIA_INTEGRACAO_CLIENTE.md`
+- `docs/clientes/CHECKLIST_INTEGRACAO_CLIENTE.md`
+
+Resumo:
+
+- todos os exemplos usam `type=test` por padrao
+- o smoke externo valida `202`, `200`, `401`, `415`, `422` e `GET /api/sms/status/{id}`
+- a documentacao reforca que nenhum SMS real e enviado
+- o gateway permanece em mock/log
+
 ## Travas de seguranca de envio
 
 Para homologacao em `gateway.tars.art.br`, o ambiente deve subir inicialmente com:
@@ -386,6 +407,17 @@ php scripts/check_queue.php
 bash scripts/smoke_test.sh
 php scripts/security_v021_tests.php
 ```
+
+## Validacao do kit de integracao v0.5
+
+Para validar o kit de integracao para clientes:
+
+1. Crie um projeto de teste no painel do gateway.
+2. Gere uma API key de teste.
+3. Execute o smoke externo com `type=test`.
+4. Confirme `202` no envio novo e `200` no replay idempotente.
+5. Abra o painel e valide `sent_mock`.
+6. Confirme que a API key nao aparece nos exemplos, logs ou respostas.
 
 ## Release v0.3-homologada-publica
 
