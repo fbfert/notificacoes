@@ -80,6 +80,16 @@ final class Config
         return max(1, self::int('QUEUE_MAX_ATTEMPTS', 3));
     }
 
+    public static function minuteLimit(): ?int
+    {
+        $raw = Env::get('MINUTE_LIMIT');
+        if ($raw === null || $raw === '') {
+            return null;
+        }
+
+        return max(0, (int) $raw);
+    }
+
     /**
      * @return string[]
      */

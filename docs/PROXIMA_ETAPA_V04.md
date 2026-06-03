@@ -1,4 +1,4 @@
-# Proxima Etapa v0.4
+# Proxima Etapa v0.5-integracao-projeto-externo-mock
 
 Esta pagina organiza a proxima evolucao do Tars Notificacoes apos a homologacao publica.
 
@@ -6,7 +6,7 @@ Esta pagina organiza a proxima evolucao do Tars Notificacoes apos a homologacao 
 
 Integrar um projeto real em modo mock, validar o fluxo completo de envio via API e manter o sistema sem envio real.
 
-## Checklist da v0.4
+## Checklist da v0.5-integracao-projeto-externo-mock
 
 1. Escolher um projeto real para integrar em modo mock.
 2. Criar o projeto e a API key no painel do Tars Notificacoes.

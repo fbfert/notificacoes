@@ -4,7 +4,7 @@ Este guia prepara o Tars Notificacoes para homologacao em uma VPS AlmaLinux 9.8 
 
 ## Status da release
 
-A release `v0.3-homologada-publica` foi validada publicamente em `https://gateway.tars.art.br`.
+A release `v0.4-operacionalizacao-do-gateway` esta em uso publicamente em `https://gateway.tars.art.br`.
 
 Configuracao homologada:
 
@@ -14,6 +14,25 @@ Configuracao homologada:
 - `SMS_TEST_ONLY=true`
 
 Nesta fase nenhum SMS real deve ser enviado.
+
+## Atualizacao incremental do schema
+
+Se o banco ja existir, aplique as alteracoes abaixo antes de subir a nova versao:
+
+```sql
+ALTER TABLE tn_projects
+    ADD COLUMN minute_limit INT UNSIGNED DEFAULT NULL AFTER monthly_limit,
+    ADD COLUMN last_used_at DATETIME DEFAULT NULL AFTER minute_limit,
+    ADD KEY idx_tn_projects_last_used_at (last_used_at);
+
+ALTER TABLE tn_sms_messages
+    ADD COLUMN delivered_at DATETIME DEFAULT NULL AFTER sent_at,
+    ADD COLUMN failed_at DATETIME DEFAULT NULL AFTER delivered_at,
+    MODIFY COLUMN type VARCHAR(20) NOT NULL DEFAULT 'transactional',
+    ADD KEY idx_tn_sms_messages_type (type);
+```
+
+Se alguma coluna ou indice ja existir no banco destino, ajuste o comando antes de executar.
 
 ## 1. Subdominio e VirtualHost
 
@@ -150,9 +169,11 @@ export API_KEY=SUA_CHAVE_DE_TESTE
 export PHONE_VALIDO='(11) 99999-9999'
 export PHONE_INVALIDO='abc'
 
+bash scripts/health_check.sh
 bash scripts/smoke_test.sh
 bash scripts/v02_edge_cases.sh
 bash scripts/panel_smoke.sh
+php scripts/v04_operational_tests.php
 php cron/processar_fila.php
 php scripts/check_queue.php
 php scripts/security_v021_tests.php

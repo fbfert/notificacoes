@@ -22,10 +22,11 @@ final class SmsService
         $projectId = (int) $project['id'];
         $maxAttempts = max(1, (int) ($project['max_attempts'] ?? Config::queueMaxAttempts()));
         $idempotencyKey = isset($meta['idempotency_key']) ? trim((string) $meta['idempotency_key']) : '';
+        $type = Config::normalizeSmsType($meta['type'] ?? null);
 
         $messageLength = function_exists('mb_strlen') ? mb_strlen($message) : strlen($message);
         if (trim($message) === '') {
-            return $this->storeBlocked($projectId, $recipient, null, $message, 'empty_message', 'Mensagem obrigatoria', $meta, $idempotencyKey, $maxAttempts);
+            return $this->storeBlocked($projectId, $recipient, null, $message, 'empty_message', 'Mensagem obrigatoria', $meta, $idempotencyKey, $maxAttempts, $type);
         }
 
         $maxLength = 160;
@@ -39,7 +40,8 @@ final class SmsService
                 'Mensagem maior que ' . $maxLength . ' caracteres',
                 $meta,
                 $idempotencyKey,
-                $maxAttempts
+                $maxAttempts,
+                $type
             );
         }
 
@@ -60,7 +62,8 @@ final class SmsService
                 (string) $recipientCheck['error_message'],
                 $meta,
                 $idempotencyKey,
-                $maxAttempts
+                $maxAttempts,
+                $type
             );
         }
 
@@ -81,7 +84,7 @@ final class SmsService
         }
 
         if ($this->isOptedOut($phone)) {
-            return $this->storeBlocked($projectId, $recipient, $phone, $message, 'optout', 'Telefone bloqueado por opt-out', $meta, $idempotencyKey, $maxAttempts);
+            return $this->storeBlocked($projectId, $recipient, $phone, $message, 'optout', 'Telefone bloqueado por opt-out', $meta, $idempotencyKey, $maxAttempts, $type);
         }
 
         $type = Config::normalizeSmsType($meta['type'] ?? null);
@@ -95,16 +98,32 @@ final class SmsService
                 'Tipo de mensagem invalido. Tipos aceitos: ' . implode(', ', Config::allowedSmsTypes()),
                 $meta,
                 $idempotencyKey,
-                $maxAttempts
+                $maxAttempts,
+                $type
+            );
+        }
+
+        if ($this->isOverMinuteLimit($project)) {
+            return $this->storeBlocked(
+                $projectId,
+                $recipient,
+                $phone,
+                $message,
+                'minute_limit_reached',
+                'Limite por minuto do projeto atingido',
+                $meta,
+                $idempotencyKey,
+                $maxAttempts,
+                $type
             );
         }
 
         if ($this->isOverLimit($project, 'daily_limit', 'DAY')) {
-            return $this->storeBlocked($projectId, $recipient, $phone, $message, 'daily_limit_reached', 'Limite diario do projeto atingido', $meta, $idempotencyKey, $maxAttempts);
+            return $this->storeBlocked($projectId, $recipient, $phone, $message, 'daily_limit_reached', 'Limite diario do projeto atingido', $meta, $idempotencyKey, $maxAttempts, $type);
         }
 
         if ($this->isOverLimit($project, 'monthly_limit', 'MONTH')) {
-            return $this->storeBlocked($projectId, $recipient, $phone, $message, 'monthly_limit_reached', 'Limite mensal do projeto atingido', $meta, $idempotencyKey, $maxAttempts);
+            return $this->storeBlocked($projectId, $recipient, $phone, $message, 'monthly_limit_reached', 'Limite mensal do projeto atingido', $meta, $idempotencyKey, $maxAttempts, $type);
         }
 
         $attempts = 0;
@@ -121,7 +140,8 @@ final class SmsService
             $meta,
             $idempotencyKey,
             $attempts,
-            $maxAttempts
+            $maxAttempts,
+            $type
         );
     }
 
@@ -219,6 +239,33 @@ final class SmsService
         return $count >= $limit;
     }
 
+    private function isOverMinuteLimit(array $project): bool
+    {
+        $limit = $project['minute_limit'] ?? Config::minuteLimit();
+        if ($limit === null) {
+            return false;
+        }
+
+        $limit = (int) $limit;
+        if ($limit === 0) {
+            return true;
+        }
+
+        $row = Database::fetchOne(
+            'SELECT COUNT(*) AS total
+             FROM tn_sms_messages
+             WHERE project_id = :project_id
+               AND created_at >= (NOW() - INTERVAL 1 MINUTE)',
+            [
+                ':project_id' => (int) $project['id'],
+            ]
+        );
+
+        $count = (int) ($row['total'] ?? 0);
+
+        return $count >= $limit;
+    }
+
     private function storeBlocked(
         int $projectId,
         string $recipientRaw,
@@ -228,18 +275,20 @@ final class SmsService
         string $errorMessage,
         array $meta,
         string $idempotencyKey,
-        int $maxAttempts
+        int $maxAttempts,
+        string $type
     ): array {
         $messageId = Database::insert(
             'INSERT INTO tn_sms_messages
-                (project_id, recipient_raw, phone, message, status, error_message, provider, meta_json, idempotency_key, attempts, max_attempts, created_at, updated_at)
+                (project_id, recipient_raw, phone, message, type, status, error_message, provider, meta_json, idempotency_key, attempts, max_attempts, sent_at, delivered_at, failed_at, created_at, updated_at)
              VALUES
-                (:project_id, :recipient_raw, :phone, :message, "blocked", :error_message, "mock", :meta_json, :idempotency_key, 0, :max_attempts, NOW(), NOW())',
+                (:project_id, :recipient_raw, :phone, :message, :type, "blocked", :error_message, "mock", :meta_json, :idempotency_key, 0, :max_attempts, NULL, NULL, NULL, NOW(), NOW())',
             [
                 ':project_id' => $projectId,
                 ':recipient_raw' => $recipientRaw,
                 ':phone' => $phone,
                 ':message' => $message,
+                ':type' => $type,
                 ':error_message' => $errorMessage,
                 ':meta_json' => json_encode($meta, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
                 ':idempotency_key' => $idempotencyKey !== '' ? $idempotencyKey : null,
@@ -276,18 +325,20 @@ final class SmsService
         array $meta,
         string $idempotencyKey,
         int $attempts,
-        int $maxAttempts
+        int $maxAttempts,
+        string $type
     ): array {
         $messageId = Database::insert(
             'INSERT INTO tn_sms_messages
-                (project_id, recipient_raw, phone, message, status, error_message, provider, meta_json, idempotency_key, attempts, max_attempts, created_at, updated_at)
+                (project_id, recipient_raw, phone, message, type, status, error_message, provider, meta_json, idempotency_key, attempts, max_attempts, sent_at, delivered_at, failed_at, created_at, updated_at)
              VALUES
-                (:project_id, :recipient_raw, :phone, :message, :status, :error_message, :provider, :meta_json, :idempotency_key, :attempts, :max_attempts, NOW(), NOW())',
+                (:project_id, :recipient_raw, :phone, :message, :type, :status, :error_message, :provider, :meta_json, :idempotency_key, :attempts, :max_attempts, NULL, NULL, NULL, NOW(), NOW())',
             [
                 ':project_id' => $projectId,
                 ':recipient_raw' => $recipientRaw,
                 ':phone' => $phone,
                 ':message' => $message,
+                ':type' => $type,
                 ':status' => $status,
                 ':error_message' => $errorMessage,
                 ':provider' => $provider,
@@ -334,14 +385,20 @@ final class SmsService
                     provider_message_id = :provider_message_id,
                     error_message = :error_message,
                     sent_at = :sent_at,
+                    delivered_at = :delivered_at,
+                    failed_at = :failed_at,
                     updated_at = NOW()
                 WHERE id = :id';
+
+        $now = date('Y-m-d H:i:s');
 
         Database::execute($sql, [
             ':status' => $status,
             ':provider_message_id' => $result['provider_message_id'] ?? $result['external_id'] ?? null,
             ':error_message' => $errorMessage,
-            ':sent_at' => $status === 'sent' ? date('Y-m-d H:i:s') : null,
+            ':sent_at' => $status === 'sent' ? ($result['sent_at'] ?? $now) : null,
+            ':delivered_at' => $status === 'sent' ? ($result['delivered_at'] ?? $result['sent_at'] ?? $now) : null,
+            ':failed_at' => $status === 'failed' ? ($result['failed_at'] ?? $now) : null,
             ':id' => $messageId,
         ]);
 

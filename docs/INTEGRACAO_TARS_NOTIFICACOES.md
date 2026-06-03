@@ -1,6 +1,6 @@
-# Integracao Tars Notificacoes v0.4
+# Integracao Tars Notificacoes v0.3.2-autoteste-administrativo-validado
 
-Esta documentacao descreve a integracao inicial de um projeto cliente com o gateway Tars Notificacoes, em modo mock/log.
+Esta documentacao descreve o autoteste administrativo interno validado do gateway Tars Notificacoes, em modo mock/log.
 
 ## Variaveis de ambiente
 
@@ -53,6 +53,11 @@ Tipos aceitos no gateway:
 ### Observacao pratica
 
 O contrato aceito pelo gateway para esta etapa contempla `transactional`, `alert` e `test`. O cliente administrativo usa `type=test` para o teste de integracao.
+
+### Nomenclatura da etapa
+
+Esta etapa corresponde a `v0.3.2-autoteste-administrativo-validado`.
+`v0.4-integracao-projeto-externo-mock` fica reservada para a integracao de um projeto externo real.
 
 ## Como validar no painel do gateway
 

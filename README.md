@@ -20,7 +20,7 @@ Base inicial de uma central de notificacoes focada em SMS, com API JSON, fila em
 
 ## Homologacao em gateway.tars.art.br
 
-A versao `v0.3-homologada-publica` foi validada publicamente em `https://gateway.tars.art.br` em modo `mock/log`.
+A versao `v0.4-operacionalizacao-do-gateway` consolida a operacao interna do gateway em `https://gateway.tars.art.br`, mantendo modo `mock/log`.
 
 Configuracao homologada:
 
@@ -90,14 +90,17 @@ Os diretórios `app/`, `config/`, `database/`, `cron/` e `storage/` possuem `.ht
 
 - `daily_limit = NULL` significa ilimitado.
 - `monthly_limit = NULL` significa ilimitado.
+- `minute_limit = NULL` significa ilimitado.
 - `daily_limit = 0` bloqueia todas as tentativas.
 - `monthly_limit = 0` bloqueia todas as tentativas.
+- `minute_limit = 0` bloqueia todas as tentativas no minuto corrente.
 
 ## API
 
 Endpoint:
 
 - `POST /api/sms/send`
+- `GET /api/sms/status/{id}`
 
 Headers:
 
@@ -123,10 +126,17 @@ Regras:
 - toda mensagem e salva no banco
 - toda tentativa gera log
 - API key do projeto e armazenada apenas como hash
+- o status de mensagem retorna somente dados do projeto autenticado
+
+Health endpoint:
+
+- `GET /health`
+- retorna JSON com `success`, `app`, `env`, `timestamp`, `queue_status`, `sms_driver` e `allow_real_send`
+- nao retorna segredos, credenciais de banco ou chaves
 
 ## Criacao de projetos
 
-O painel administrativo permite cadastrar projetos, mas a `api_key` precisa ser informada manualmente e nao e exibida depois de salva. Isso evita expor segredos no painel.
+O painel administrativo permite cadastrar projetos e gerenciar API keys sem expor segredos.
 
 Campos do projeto:
 
@@ -135,7 +145,17 @@ Campos do projeto:
 - `api_key`
 - `daily_limit`
 - `monthly_limit`
+- `minute_limit`
 - `max_attempts`
+- `last_used_at` e atualizado quando a API aceita a chave
+
+Gestao de chaves no painel:
+
+- regenerar API key de um projeto
+- exibir a nova chave apenas uma vez
+- desativar/ativar projeto
+- nunca mostrar chaves antigas
+- registrar log administrativo da acao
 
 ## Painel administrativo
 
@@ -150,7 +170,11 @@ Rotas:
 - `POST /admin/logout`
 - `GET /admin/projects`
 - `POST /admin/projects`
+- `POST /admin/projects/{id}/regenerate-key`
+- `POST /admin/projects/{id}/activate`
+- `POST /admin/projects/{id}/deactivate`
 - `GET /admin/messages`
+- `GET /admin/messages/{id}`
 
 O painel usa sessao segura, `CSRF` nos formulários e nao exibe a `api_key` de projetos.
 
@@ -163,6 +187,29 @@ php cron/processar_fila.php
 ```
 
 O cron faz claim transacional do registro, muda o status para `processing` e evita processar a mesma mensagem em duas execucoes simultaneas.
+
+## Operacao interna v0.4
+
+A etapa `v0.4-operacionalizacao-do-gateway` adiciona:
+
+- gestao de API keys no painel
+- `last_used_at` por projeto
+- `minute_limit` por projeto
+- `GET /api/sms/status/{id}`
+- `GET /health`
+- filtros e detalhe de mensagens no painel
+
+O envio real continua bloqueado:
+
+- `SMS_DRIVER=mock`
+- `SMS_PROVIDER=mock`
+- `SMS_ALLOW_REAL_SEND=false`
+- `SMS_TEST_ONLY=true`
+
+Documentacao operacional:
+
+- [docs/API_STATUS.md](docs/API_STATUS.md)
+- [docs/GESTAO_API_KEYS.md](docs/GESTAO_API_KEYS.md)
 
 ## Travas de seguranca de envio
 
@@ -309,6 +356,37 @@ Edite no topo de `scripts/smoke_test.sh` ou exporte antes de executar:
 
 Os scripts `scripts/v02_edge_cases.sh` e `scripts/panel_smoke.sh` cobrem os cenarios de projeto inativo, opt-out, limites, login/logout e CSRF do painel.
 
+## Validacao da v0.4-operacionalizacao-do-gateway
+
+Use esta sequencia para validar a operacao interna do gateway antes de qualquer evolucao externa:
+
+Se qualquer script informar `Schema incompleto`, aplique primeiro os `ALTER TABLE` documentados em [DEPLOY.md](DEPLOY.md).
+
+1. Checar saude e ausencia de segredos:
+
+```bash
+bash scripts/health_check.sh
+```
+
+2. Validar chave, status, painel e rate limit por minuto:
+
+```bash
+php scripts/v04_operational_tests.php
+```
+
+3. Conferir a fila e os logs:
+
+```bash
+php scripts/check_queue.php
+```
+
+4. Rodar novamente os testes de base se houver alteracao de schema ou autenticacao:
+
+```bash
+bash scripts/smoke_test.sh
+php scripts/security_v021_tests.php
+```
+
 ## Release v0.3-homologada-publica
 
 A homologacao publica foi concluida em `https://gateway.tars.art.br` com:
@@ -324,9 +402,13 @@ A homologacao publica foi concluida em `https://gateway.tars.art.br` com:
 
 O ambiente permanece em modo mock/log, sem envio real de SMS.
 
-## Integracao de cliente v0.4
+## v0.3.2-autoteste-administrativo-validado
 
-A integracao inicial do projeto cliente com o gateway esta documentada em [docs/INTEGRACAO_TARS_NOTIFICACOES.md](docs/INTEGRACAO_TARS_NOTIFICACOES.md).
+O autoteste administrativo interno do gateway foi validado em modo mock/log. A documentacao da etapa esta em [docs/INTEGRACAO_TARS_NOTIFICACOES.md](docs/INTEGRACAO_TARS_NOTIFICACOES.md).
+
+### Proxima etapa externa
+
+`v0.5-integracao-projeto-externo-mock` fica reservada para a integracao de um projeto externo real com o gateway.
 
 ### Respostas HTTP esperadas
 

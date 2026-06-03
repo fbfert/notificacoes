@@ -40,6 +40,7 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
 
 use App\Controllers\AdminDashboardController;
 use App\Controllers\ApiSmsController;
+use App\Controllers\HealthController;
 use App\Controllers\MessagesController;
 use App\Controllers\ProjectsController;
 use App\Core\Request;
@@ -59,8 +60,14 @@ $router->post('/admin/login', [AdminDashboardController::class, 'login']);
 $router->post('/admin/logout', [AdminDashboardController::class, 'logout']);
 $router->get('/admin/projects', [ProjectsController::class, 'index']);
 $router->post('/admin/projects', [ProjectsController::class, 'store']);
+$router->post('/admin/projects/{id}/regenerate-key', [ProjectsController::class, 'regenerateKey']);
+$router->post('/admin/projects/{id}/activate', [ProjectsController::class, 'activate']);
+$router->post('/admin/projects/{id}/deactivate', [ProjectsController::class, 'deactivate']);
 $router->get('/admin/messages', [MessagesController::class, 'index']);
+$router->get('/admin/messages/{id}', [MessagesController::class, 'show']);
+$router->get('/health', [HealthController::class, 'index']);
 $router->post('/api/sms/send', [ApiSmsController::class, 'send']);
+$router->get('/api/sms/status/{id}', [ApiSmsController::class, 'status']);
 
 try {
     $router->dispatch($request);

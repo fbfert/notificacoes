@@ -1,5 +1,12 @@
 RewriteEngine On
 Options -Indexes
+SetEnv APP_ENV production
+SetEnv APP_DEBUG false
+SetEnv SMS_DRIVER mock
+SetEnv SMS_PROVIDER mock
+SetEnv SMS_ALLOW_REAL_SEND false
+SetEnv SMS_TEST_ONLY true
+SetEnv SMS_ALLOWED_TEST_PHONES 5549999999999,5511999999999
 
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d

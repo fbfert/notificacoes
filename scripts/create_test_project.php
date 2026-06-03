@@ -24,6 +24,31 @@ date_default_timezone_set((string) ($_ENV['APP_TIMEZONE'] ?? 'America/Sao_Paulo'
 
 use App\Core\Database;
 
+$requiredColumns = [
+    'tn_projects' => ['minute_limit', 'last_used_at'],
+];
+
+foreach ($requiredColumns as $table => $columns) {
+    foreach ($columns as $column) {
+        $row = Database::fetchOne(
+            'SELECT COUNT(*) AS total
+             FROM INFORMATION_SCHEMA.COLUMNS
+             WHERE TABLE_SCHEMA = DATABASE()
+               AND TABLE_NAME = :table
+               AND COLUMN_NAME = :column',
+            [
+                ':table' => $table,
+                ':column' => $column,
+            ]
+        );
+
+        if ((int) ($row['total'] ?? 0) !== 1) {
+            fwrite(STDERR, sprintf("Schema incompleto: execute os ALTER TABLE para adicionar %s.%s\n", $table, $column));
+            exit(1);
+        }
+    }
+}
+
 $name = 'Projeto Teste v0.2';
 $slug = 'projeto-teste-v0-2';
 $apiKeyPlain = bin2hex(random_bytes(24));
@@ -41,9 +66,9 @@ if ($existing !== null) {
 
 Database::insert(
     'INSERT INTO tn_projects
-        (name, slug, api_key_hash, active, daily_limit, monthly_limit, max_attempts, created_at, updated_at)
+        (name, slug, api_key_hash, active, daily_limit, monthly_limit, minute_limit, max_attempts, last_used_at, created_at, updated_at)
      VALUES
-        (:name, :slug, :api_key_hash, 1, NULL, NULL, 3, NOW(), NOW())',
+        (:name, :slug, :api_key_hash, 1, NULL, NULL, NULL, 3, NULL, NOW(), NOW())',
     [
         ':name' => $name,
         ':slug' => $slug,

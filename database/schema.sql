@@ -6,12 +6,15 @@ CREATE TABLE IF NOT EXISTS tn_projects (
     active TINYINT(1) NOT NULL DEFAULT 1,
     daily_limit INT UNSIGNED DEFAULT NULL,
     monthly_limit INT UNSIGNED DEFAULT NULL,
+    minute_limit INT UNSIGNED DEFAULT NULL,
     max_attempts TINYINT UNSIGNED NOT NULL DEFAULT 3,
+    last_used_at DATETIME DEFAULT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
     UNIQUE KEY uq_tn_projects_slug (slug),
-    KEY idx_tn_projects_active (active)
+    KEY idx_tn_projects_active (active),
+    KEY idx_tn_projects_last_used_at (last_used_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS tn_sms_messages (
@@ -20,7 +23,7 @@ CREATE TABLE IF NOT EXISTS tn_sms_messages (
     recipient_raw VARCHAR(50) NOT NULL,
     phone VARCHAR(20) DEFAULT NULL,
     message VARCHAR(160) NOT NULL,
-    type VARCHAR(20) NOT NULL DEFAULT 'sms',
+    type VARCHAR(20) NOT NULL DEFAULT 'transactional',
     status ENUM('queued', 'processing', 'sent', 'failed', 'blocked') NOT NULL DEFAULT 'queued',
     provider VARCHAR(50) NOT NULL DEFAULT 'mock',
     provider_message_id VARCHAR(120) DEFAULT NULL,
@@ -30,6 +33,8 @@ CREATE TABLE IF NOT EXISTS tn_sms_messages (
     max_attempts TINYINT UNSIGNED NOT NULL DEFAULT 3,
     meta_json JSON DEFAULT NULL,
     sent_at DATETIME DEFAULT NULL,
+    delivered_at DATETIME DEFAULT NULL,
+    failed_at DATETIME DEFAULT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
@@ -37,6 +42,7 @@ CREATE TABLE IF NOT EXISTS tn_sms_messages (
     KEY idx_tn_sms_messages_status (status),
     KEY idx_tn_sms_messages_created_at (created_at),
     KEY idx_tn_sms_messages_phone (phone),
+    KEY idx_tn_sms_messages_type (type),
     UNIQUE KEY uq_tn_sms_messages_idempotency (project_id, idempotency_key),
     CONSTRAINT fk_tn_sms_messages_project
         FOREIGN KEY (project_id) REFERENCES tn_projects (id)
@@ -97,5 +103,5 @@ CREATE TABLE IF NOT EXISTS tn_settings (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Projeto de teste opcional:
--- INSERT INTO tn_projects (name, slug, api_key_hash, active, daily_limit, monthly_limit, max_attempts)
--- VALUES ('Projeto Teste', 'projeto-teste', '$2y$10$troque-por-um-hash-valido', 1, NULL, NULL, 3);
+-- INSERT INTO tn_projects (name, slug, api_key_hash, active, daily_limit, monthly_limit, minute_limit, max_attempts, last_used_at)
+-- VALUES ('Projeto Teste', 'projeto-teste', '$2y$10$troque-por-um-hash-valido', 1, NULL, NULL, NULL, 3, NULL);

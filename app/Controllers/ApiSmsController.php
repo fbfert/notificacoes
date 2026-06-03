@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Controllers;
 
+use App\Core\Database;
 use App\Core\Response;
 use App\Core\Request;
 use App\Middleware\ApiKeyMiddleware;
@@ -155,5 +156,52 @@ final class ApiSmsController
             'message' => !empty($result['idempotent_hit']) ? 'Mensagem ja existente retornada' : 'Mensagem recebida e enfileirada',
             'data' => $result,
         ], !empty($result['idempotent_hit']) ? 200 : 202);
+    }
+
+    public function status(Request $request, string $id): never
+    {
+        $project = (new ApiKeyMiddleware())->handle($request);
+
+        if (!ctype_digit($id)) {
+            Response::json([
+                'success' => false,
+                'error_code' => 'message_not_found',
+                'message' => 'Mensagem nao encontrada',
+            ], 404);
+        }
+
+        $message = Database::fetchOne(
+            'SELECT id, project_id, type, status, provider, created_at, sent_at, delivered_at, failed_at, error_message
+             FROM tn_sms_messages
+             WHERE id = :id AND project_id = :project_id
+             LIMIT 1',
+            [
+                ':id' => (int) $id,
+                ':project_id' => (int) $project['id'],
+            ]
+        );
+
+        if ($message === null) {
+            Response::json([
+                'success' => false,
+                'error_code' => 'message_not_found',
+                'message' => 'Mensagem nao encontrada',
+            ], 404);
+        }
+
+        Response::json([
+            'success' => true,
+            'data' => [
+                'message_id' => (int) $message['id'],
+                'status' => (string) $message['status'],
+                'type' => (string) $message['type'],
+                'provider' => (string) $message['provider'],
+                'created_at' => $message['created_at'],
+                'sent_at' => $message['sent_at'],
+                'delivered_at' => $message['delivered_at'],
+                'failed_at' => $message['failed_at'],
+                'error_message' => $message['error_message'] !== null ? (string) $message['error_message'] : null,
+            ],
+        ]);
     }
 }

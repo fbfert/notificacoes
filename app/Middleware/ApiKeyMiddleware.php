@@ -21,7 +21,7 @@ final class ApiKeyMiddleware
             ], 401);
         }
 
-        $projects = Database::fetchAll('SELECT id, name, slug, api_key_hash, active, daily_limit, monthly_limit, max_attempts FROM tn_projects ORDER BY id DESC');
+        $projects = Database::fetchAll('SELECT id, name, slug, api_key_hash, active, daily_limit, monthly_limit, minute_limit, max_attempts, last_used_at FROM tn_projects ORDER BY id DESC');
         foreach ($projects as $project) {
             if (password_verify($token, (string) $project['api_key_hash'])) {
                 if ((int) $project['active'] !== 1) {
@@ -32,6 +32,8 @@ final class ApiKeyMiddleware
                     ], 403);
                 }
 
+                $this->touchLastUsedAt((int) $project['id']);
+
                 return $project;
             }
         }
@@ -41,5 +43,18 @@ final class ApiKeyMiddleware
             'error_code' => 'api_key_invalid',
             'message' => 'API key invalida',
         ], 401);
+    }
+
+    private function touchLastUsedAt(int $projectId): void
+    {
+        Database::execute(
+            'UPDATE tn_projects
+             SET last_used_at = NOW(),
+                 updated_at = NOW()
+             WHERE id = :id',
+            [
+                ':id' => $projectId,
+            ]
+        );
     }
 }

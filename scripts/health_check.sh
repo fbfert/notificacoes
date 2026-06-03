@@ -48,6 +48,29 @@ admin_status="${admin_response%%$'\n'*}"
 admin_file="${admin_response#*$'\n'}"
 printf '[INFO] GET /admin -> HTTP %s | corpo=%s\n' "$admin_status" "$(snippet "$admin_file")"
 
+health_url="${BASE_URL%/}/health"
+health_response="$(request GET "$health_url" "")"
+health_status="${health_response%%$'\n'*}"
+health_file="${health_response#*$'\n'}"
+printf '[INFO] GET /health -> HTTP %s | corpo=%s\n' "$health_status" "$(snippet "$health_file")"
+
+health_ok="$(php -r '
+$payload = json_decode(file_get_contents($argv[1]), true);
+if (!is_array($payload)) { exit(1); }
+if (($payload["success"] ?? false) !== true) { exit(2); }
+if (($payload["allow_real_send"] ?? true) !== false) { exit(3); }
+if (!isset($payload["queue_status"]) || !is_array($payload["queue_status"])) { exit(4); }
+foreach (["api_key","DB_PASSWORD","password"] as $needle) {
+    if (strpos(file_get_contents($argv[1]), $needle) !== false) { exit(5); }
+}
+echo "ok";
+' "$health_file")"
+
+if [[ "$health_ok" != "ok" ]]; then
+    printf '[FAIL] /health nao retornou o JSON esperado\n'
+    exit 1
+fi
+
 api_response="$(request POST "$api_url" '{"phone":"'"$PHONE_VALIDO"'","message":"Health check","type":"transactional"}' -H 'Content-Type: application/json')"
 api_status="${api_response%%$'\n'*}"
 api_file="${api_response#*$'\n'}"

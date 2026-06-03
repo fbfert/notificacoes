@@ -1,5 +1,25 @@
 # Release Notes
 
+## v0.4-operacionalizacao-do-gateway
+
+Etapa de operacao interna do gateway Tars Notificacoes, ainda em modo mock/log.
+
+### O que foi adicionado
+
+- gestao de API keys no painel
+- regeneracao de API key com exibicao unica da nova chave
+- desativacao/ativacao de projetos
+- `last_used_at` atualizado quando a API autentica com sucesso
+- `minute_limit` por projeto
+- endpoint `GET /api/sms/status/{id}`
+- endpoint `GET /health`
+- filtros e detalhe de mensagens no painel
+- log administrativo das acoes de chave/projeto
+
+### Observacao
+
+Nenhum SMS real deve ser enviado nesta fase. O envio real continua bloqueado por configuracao.
+
 ## v0.3.1-correcao-contrato-type
 
 Correção de contrato da API para o gateway Tars Notificacoes.
@@ -16,6 +36,23 @@ Correção de contrato da API para o gateway Tars Notificacoes.
 ### Observacao
 
 Esta é uma correção da v0.3 homologada publicamente, não a v0.4.
+
+## v0.3.2-autoteste-administrativo-validado
+
+Validação do autoteste administrativo interno do próprio gateway, em modo mock/log, usando `POST /admin/tars-notificacoes/test`.
+
+### O que foi validado
+
+- cliente interno `TarsNotificationsClient`
+- retorno `202` em envio novo
+- retorno `200` em reenvio idempotente
+- captura de `message_id`
+- processamento da fila até `sent_mock`
+- log local estruturado sem exposição de API key
+
+### Observacao de nomenclatura
+
+Esta etapa não é `v0.4`. A próxima etapa externa fica reservada como `v0.4-integracao-projeto-externo-mock`.
 
 ## v0.3-homologada-publica
 
