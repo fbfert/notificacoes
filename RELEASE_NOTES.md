@@ -2,23 +2,25 @@
 
 ## v0.4-operacionalizacao-do-gateway
 
-Etapa de operacao interna do gateway Tars Notificacoes, ainda em modo mock/log.
+Etapa aprovada para operacionalização interna do Tars Notificações.
 
-### O que foi adicionado
+### Principais entregas
 
-- gestao de API keys no painel
-- regeneracao de API key com exibicao unica da nova chave
-- desativacao/ativacao de projetos
-- `last_used_at` atualizado quando a API autentica com sucesso
-- `minute_limit` por projeto
-- endpoint `GET /api/sms/status/{id}`
-- endpoint `GET /health`
-- filtros e detalhe de mensagens no painel
-- log administrativo das acoes de chave/projeto
-
-### Observacao
-
-Nenhum SMS real deve ser enviado nesta fase. O envio real continua bloqueado por configuracao.
+- Gestão de API keys no painel administrativo.
+- Regeneração de API key com exibição única da nova chave.
+- Invalidação da chave antiga após regeneração.
+- Registro de `last_used_at` para projetos autenticados.
+- Endpoint `GET /api/sms/status/{id}`.
+- Restrição de consulta de status ao projeto proprietário da mensagem.
+- Endpoint `GET /health` com dados operacionais não sensíveis.
+- Filtros e tela de detalhe de mensagens no painel.
+- Timeline de logs por mensagem.
+- `minute_limit` por projeto.
+- Bloqueio por minuto com status `blocked`.
+- Testes operacionais v0.4 aprovados.
+- Smoke tests, edge cases, painel e segurança v0.2.1 preservados.
+- Nenhum SMS real enviado.
+- Gateway permanece em mock/log.
 
 ## v0.3.1-correcao-contrato-type
 
